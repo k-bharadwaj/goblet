@@ -33,10 +33,7 @@ counter = 0
 
 while True:
     rxData, addr = sock.recvfrom(1024)
-    if rxData != expectedData:
-        print "Data Mismatch @ counter {}. : Expected: {}, GOT: {}".format(counter, expectedData, rxData)
-        break
     counter = counter + 1
     if DEBUG:
-        print "pkt rx ctr: {}".format(counter)
+        print "ctr: {} data: {}".format(counter, rxData)
 

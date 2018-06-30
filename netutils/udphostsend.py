@@ -1,5 +1,5 @@
 '''
-Simple UDP Echo test, with this script being the driver
+Simple UDP packet send, with this script being the driver
 
 Steps to run: 
 	* Set IP of host to 192.168.1.11
@@ -16,36 +16,35 @@ import socket
 import time
 
 # TurnMeOn
-DEBUG = True
+DEBUG = False
 
 PC_IP = "192.168.1.11"
 PC_PORT = 8001
 TMS_IP = "192.168.1.10"
 TMS_PORT = 8000
 
+# ChangeMe
+KILOBITS_PER_SEC = 100
+
 sock = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
 sock.bind((PC_IP, PC_PORT))
 
-txData = "Hello, How are you doing today?"
+txData = "forklyft"
 txDataBytes = len(txData)
 
-# calculate the max data rate we can spam the eth IF on.
-# assume 100 MBPS
-# PPS = 16.5MBPS / (txDataBytesperpacket)
-# seconds per packet = 1/pps
-
-pps = 16.5 * 1000000 / txDataBytes
-delayPerPacket = 1/pps
+# this is to test the CAN fwding svc, so calculate data rate for 'kbps' kbps 
+kiloBytesPerSec = KILOBITS_PER_SEC / 8.0
+bytesPerSec = kiloBytesPerSec * 1000
+packetsPerSec = bytesPerSec / txDataBytes
+delayPerPacket = 1.0/packetsPerSec
 
 counter = 0
 
 while True:
     sock.sendto(txData, (TMS_IP, TMS_PORT))
-    rxData, addr = sock.recvfrom(1024)
-    #if rxData != txData:
-    # 	print "Data Mismatch @ counter {}. : SENT: {}, GOT: {}".format(counter, txData, rxData)
     counter = counter + 1
     if DEBUG:
-    	print "ctr: {} data: {}".format(counter, rxData)
+    	print "pkt send ctr: {}".format(counter)
     time.sleep(delayPerPacket)
+	#time.sleep(1)
