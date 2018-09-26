@@ -9,12 +9,13 @@ Steps to run:
 	* Run this script
     * Reset the target, host should now be listening for packets
 	* Script breaks out of forever loop if data is not what's expected
-    * Set DEBUG = True for packet count
+    * Set DEBUG = True for debug stuff
 '''
 
 import socket
 import time
 import subprocess
+from struct import unpack
 
 # TurnMeOn
 DEBUG = True
@@ -22,7 +23,55 @@ DEBUG = True
 PC_IP = "192.168.1.11"
 PC_PORT = 55555
 
+PACKET_MAGIC = 0xdeadbeef
+MIC_MAGIC = 0xfeedbeef
+
+WORD_SIZE_BYTES = 4
+PACKET_HDR_SIZE = (3 * WORD_SIZE_BYTES)
+
+'''
+
+------------
+PACKET_MAGIC (U32)
+------------
+PACKET_ID (U32)
+------------
+NUM_CHANS (U32)
+------------
+MIC_MAGIC(0)  (U32)
+------------
+MIC_CHANNEL(0) (U32)
+------------
+DATALEN(0)      (U32)
+------------
+PADDING(0)      (U32)
+------------
+DATA(0)
+------------
+.
+.
+------------
+PADDING(0)
+------------
+.
+.
+------------
+MIC_MAGIC(1)
+------------
+.
+.
+------------
+MIC_MAGIC(N)
+------------
+
+'''
+
+
 fd_list = []
+
+def dbgprint(msg):
+    if DEBUG:
+        print(msg)
 
 def init():
     f = open('channel_{}_test.raw'.format(0), 'wb')
@@ -30,6 +79,12 @@ def init():
 
 
 def processData(data):
+    # TODO - make header a class later
+    pkt_hdr_bytes = data[0 : PACKET_HDR_SIZE]
+    data = data[PACKET_HDR_SIZE:]
+    [hdr_magic, pkt_id, n_chans] = unpack('!III', pkt_hdr_bytes)
+    dbgprint("Header: {}, PktId: {}, NChannels: {}".format(hdr_magic, pkt_id, n_chans))
+
     channel = 0
 
     fd = fd_list[channel]
