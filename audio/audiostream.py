@@ -20,7 +20,7 @@ import subprocess
 # TurnMeOn
 DEBUG = True
 
-PC_IP = "10.112.101.197"
+PC_IP = "192.168.1.11"
 PC_PORT = 55555
 
 MAGIC = bytearray([0xab, 0xcd, 0xef, 0x10])

@@ -24,7 +24,7 @@ TMS_IP = "192.168.1.10"
 TMS_PORT = 8000
 
 # ChangeMe
-KILOBITS_PER_SEC = 100
+KILOBITS_PER_SEC = 50
 
 sock = socket.socket(socket.AF_INET, # Internet
                      socket.SOCK_DGRAM) # UDP
@@ -40,6 +40,8 @@ packetsPerSec = bytesPerSec / txDataBytes
 delayPerPacket = 1.0/packetsPerSec
 
 counter = 0
+
+print("Sending data @ {} kbitsPerSec".format(KILOBITS_PER_SEC))
 
 while True:
     sock.sendto(txData, (TMS_IP, TMS_PORT))
