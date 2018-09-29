@@ -83,8 +83,8 @@ def processData(data):
     pkt_hdr_bytes = data[0 : PACKET_HDR_SIZE]
     data = data[PACKET_HDR_SIZE:]
     [hdr_magic, pkt_id, n_chans] = unpack('!III', pkt_hdr_bytes)
-    dbgprint("Header: {}, PktId: {}, NChannels: {}".format(hdr_magic, pkt_id, n_chans))
-
+    dbgprint("Header: {}, PktId: {}, NChannels: {}".format(hex(hdr_magic), hex(pkt_id), hex(n_chans)))
+	
     channel = 0
 
     fd = fd_list[channel]
@@ -101,7 +101,7 @@ def main():
     init()
 
     while True:
-        rxData, addr = sock.recvfrom(32768)
+        rxData, addr = sock.recvfrom(32768 + PACKET_HDR_SIZE)
         counter = counter + 1
 
         processData(rxData)
