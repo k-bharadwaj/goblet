@@ -27,7 +27,10 @@ PACKET_MAGIC = 0xdeadbeef
 MIC_MAGIC = 0xfeedbeef
 
 WORD_SIZE_BYTES = 4
-PACKET_HDR_SIZE = (3 * WORD_SIZE_BYTES)
+PACKET_HDR_SIZE = (2 * WORD_SIZE_BYTES)
+CHANNEL_HDR_SIZE = (4 * WORD_SIZE_BYTES)
+
+MAX_CHANNELS = 9
 
 '''
 
@@ -74,21 +77,31 @@ def dbgprint(msg):
         print(msg)
 
 def init():
-    f = open('channel_{}_test.raw'.format(0), 'wb')
-    fd_list.append(f)
+    for i in range(MAX_CHANNELS):
+        fd = open('channel_{}_test.raw'.format(i), 'wb')
+        fd_list.append(fd)
 
 
 def processData(data):
     # TODO - make header a class later
     pkt_hdr_bytes = data[0 : PACKET_HDR_SIZE]
     data = data[PACKET_HDR_SIZE:]
-    [hdr_magic, pkt_id, n_chans] = unpack('!III', pkt_hdr_bytes)
-    dbgprint("Header: {}, PktId: {}, NChannels: {}".format(hex(hdr_magic), hex(pkt_id), hex(n_chans)))
+    [hdr_magic, n_channels] = unpack('!II', pkt_hdr_bytes)
+    dbgprint("Header: {}, n_channels: {}".format(hex(hdr_magic), hex(n_channels)))
 	
-    channel = 0
+    if n_channels >= MAX_CHANNELS:
+        raise Exception("Maximum channels supported is {}".format(MAX_CHANNELS))
 
-    fd = fd_list[channel]
-    fd.write(data)
+    for i in range(n_channels):
+        chan_hdr_bytes = data[0 : CHANNEL_HDR_SIZE]
+        data = data[CHANNEL_HDR_SIZE:]
+        [chan_magic, chan_id, data_len, padding_len] = unpack('IIII', chan_hdr_bytes)
+        if (chan_id >= MAX_CHANNELS):
+            raise Exception("Channel ID cannot be > {}".format(MAX_CHANNELS))
+        channel_payload = data[0 : data_len]
+        data = data[(data_len + padding_len):]
+
+        fd_list[chan_id].write(channel_payload)
 
 
 def main():
