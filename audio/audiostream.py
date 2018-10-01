@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 '''
 Simple UDP listen test, with the target being the driver
 
@@ -10,41 +9,91 @@ Steps to run:
 	* Run this script
     * Reset the target, host should now be listening for packets
 	* Script breaks out of forever loop if data is not what's expected
-    * Set DEBUG = True for packet count
+    * Set DEBUG = True for debug stuff
 '''
 
 import socket
 import time
 import subprocess
+from struct import unpack
 
 # TurnMeOn
 DEBUG = True
 
-PC_IP = "192.168.1.11"
+PC_IP = "10.161.0.99"
 PC_PORT = 55555
 
-MAGIC = bytearray([0xab, 0xcd, 0xef, 0x10])
-HEADER_SIZE = 2*len(MAGIC) + 1
+PACKET_MAGIC = 0xdeadbeef
+MIC_MAGIC = 0xfeedbeef
+
+WORD_SIZE_BYTES = 4
+PACKET_HDR_SIZE = (3 * WORD_SIZE_BYTES)
+CHANNEL_HDR_SIZE = (5 * WORD_SIZE_BYTES)
+
+MAX_CHANNELS = 9
+
+'''
+
+------------
+PACKET_MAGIC (U32)
+------------
+PACKET_ID (U32)
+------------
+NUM_CHANS (U32)
+------------
+MIC_MAGIC(0)  (U32)
+------------
+MIC_CHANNEL(0) (U32)
+------------
+DATALEN(0)      (U32)
+------------
+PADDING(0)      (U32)
+------------
+DATA(0)
+------------
+.
+.
+------------
+PADDING(0)
+------------
+.
+.
+------------
+MIC_MAGIC(1)
+------------
+.
+.
+------------
+MIC_MAGIC(N)
+------------
+
+'''
+
+
 fd_list = []
 
+def dbgprint(msg):
+    if DEBUG:
+        print(msg)
+
 def init():
-    subprocess.call("./deletewavs.sh", shell=True)
-    for channel in range(9):
-        f = open('channel_{}.raw'.format(channel), 'wb')
-        fd_list.append(f)
+    for i in range(MAX_CHANNELS):
+        fd = open('channel_{}_test.raw'.format(i), 'wb')
+        fd_list.append(fd)
 
 
 def processData(data):
-    magic_len = len(MAGIC)
-    meta = data[0:magic_len]
-    if (MAGIC != meta) or (MAGIC != data[magic_len + 1 : HEADER_SIZE]):
-        print("malformed packet (header: {})".format(data[0:HEADER_SIZE]))
-        return
-    
-    channel = int(data[magic_len])
-    data = data[magic_len + 1:]
-    fd = fd_list[channel]
-    fd.write(data)
+    # TODO - make header a class later
+	chan_hdr_bytes = data[0 : CHANNEL_HDR_SIZE]
+	data = data[CHANNEL_HDR_SIZE:]
+	[chan_magic, chan_id, sampling_freq, data_len, padding_len] = unpack('IIIII', chan_hdr_bytes)
+	print("received samples from chan {} @ {} Hz".format(chan_id, sampling_freq))
+	if (chan_id >= MAX_CHANNELS):
+		raise Exception("Channel ID cannot be > {}".format(MAX_CHANNELS))
+	channel_payload = data[0 : data_len]
+	data = data[(data_len + padding_len):]
+
+	fd_list[chan_id].write(channel_payload)
 
 
 def main():
@@ -57,7 +106,7 @@ def main():
     init()
 
     while True:
-        rxData, addr = sock.recvfrom(32775)
+        rxData, addr = sock.recvfrom(32768 + CHANNEL_HDR_SIZE)
         counter = counter + 1
 
         processData(rxData)
